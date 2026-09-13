@@ -1,7 +1,7 @@
 module HCC.Parser where
 
 import Control.Applicative
-import HCC.Lexer (Token (..))
+import HCC.Lexer (Keyword (..), Token (..))
 
 data Program = Program
   { function :: Function
@@ -18,7 +18,7 @@ data Statement
   deriving (Show)
 
 data Expression
-  = Integer Integer
+  = IntegerConstant Integer
   deriving (Show)
 
 newtype Parser a = Parser
@@ -45,6 +45,37 @@ tokenParser :: Token -> Parser Token
 tokenParser tok = Parser $ \input -> case input of
   (x : xs) | tok == x -> Just (xs, x)
   _ -> Nothing
+
+integerParser :: Parser Integer
+integerParser = Parser $ \input -> case input of
+  (IntegerLiteral n : xs) -> Just (xs, n)
+  _ -> Nothing
+
+identifierParser :: Parser String
+identifierParser = Parser $ \input -> case input of
+  (Identifier n : xs) -> Just (xs, n)
+  _ -> Nothing
+
+expressionParser :: Parser Expression
+expressionParser = IntegerConstant <$> integerParser
+
+returnParser :: Parser Statement
+returnParser =
+  Return <$> (tokenParser (Keyword CReturn) *> expressionParser <* tokenParser Semicolon)
+
+statementParser :: Parser Statement
+statementParser = returnParser
+
+functionParser :: Parser Function
+functionParser =
+  Function
+    <$> (tokenParser (Keyword CInt) *> identifierParser)
+    <*> ( tokenParser OpenParenthesis
+            *> tokenParser CloseParenthesis
+            *> tokenParser OpenBrace
+            *> statementParser
+            <* tokenParser CloseBrace
+        )
 
 parser :: [Token] -> Program
 parser = undefined
