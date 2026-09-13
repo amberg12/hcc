@@ -10,7 +10,7 @@ import Data.Char (isAlpha, isAlphaNum, isDigit, isSpace)
 data Keyword
   = CInt
   | CReturn
-  deriving (Show)
+  deriving (Show, Eq)
 
 data Token
   = OpenParenthesis
@@ -20,8 +20,8 @@ data Token
   | Semicolon
   | Keyword Keyword
   | Identifier String
-  | IntegerConstant Integer
-  deriving (Show)
+  | IntegerLiteral Integer
+  deriving (Show, Eq)
 
 newtype Lexer a = Lexer
   { runLexer :: String -> Maybe (String, a)
@@ -80,8 +80,8 @@ spanLexer f = Lexer $ \input ->
     ("", _) -> Nothing
     (output, input') -> Just (input', output)
 
-integerConstantLexer :: Lexer Token
-integerConstantLexer = (\input -> IntegerConstant $ read input) <$> spanLexer isDigit
+integerLiteralLexer :: Lexer Token
+integerLiteralLexer = (\input -> IntegerLiteral $ read input) <$> spanLexer isDigit
 
 identifierLexer :: Lexer Token
 identifierLexer = Lexer $ \input ->
@@ -98,7 +98,7 @@ keywordLexer = Lexer $ \input -> do
     _ -> Nothing
 
 tokenLexer :: Lexer Token
-tokenLexer = grammarLexer <|> keywordLexer <|> identifierLexer <|> integerConstantLexer
+tokenLexer = grammarLexer <|> keywordLexer <|> identifierLexer <|> integerLiteralLexer
 
 lexer :: String -> Maybe [Token]
 lexer [] = Just []
