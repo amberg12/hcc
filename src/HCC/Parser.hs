@@ -1,4 +1,10 @@
-module HCC.Parser where
+module HCC.Parser
+  ( Program (..)
+  , Function (..)
+  , Statement (..)
+  , Expression (..)
+  , parser
+  ) where
 
 import Control.Applicative
 import HCC.Lexer (Keyword (..), Token (..))
@@ -6,6 +12,7 @@ import HCC.Lexer (Keyword (..), Token (..))
 data Program = Program
   { function :: Function
   }
+  deriving (Show)
 
 data Function = Function
   { identifier :: String
@@ -77,5 +84,11 @@ functionParser =
             <* tokenParser CloseBrace
         )
 
-parser :: [Token] -> Program
-parser = undefined
+programParser :: Parser Program
+programParser =
+  Program <$> functionParser
+
+parser :: [Token] -> Maybe Program
+parser tokens = case runParser programParser tokens of
+  Just ([], program) -> Just program
+  _ -> Nothing
