@@ -1,10 +1,11 @@
 module HCC.Lexer where
 
 import Control.Applicative
-import Data.Char (isDigit)
+import Data.Char (isAlpha, isAlphaNum, isDigit)
 
 data Keyword
   = CInt
+  | CReturn
   deriving (Show)
 
 data Token
@@ -77,6 +78,20 @@ spanLexer f = Lexer $ \input ->
 
 integerConstantLexer :: Lexer Token
 integerConstantLexer = (\input -> IntegerConstant $ read input) <$> spanLexer isDigit
+
+identifierLexer :: Lexer Token
+identifierLexer = Lexer $ \input ->
+  case runLexer (spanLexer isAlphaNum) input of
+    Just (output, i@(h : _)) | isAlpha h -> Just (output, Identifier i)
+    _ -> Nothing
+
+keywordLexer :: Lexer Token
+keywordLexer = Lexer $ \input -> do
+  (rest, kw) <- runLexer (spanLexer isAlphaNum) input
+  case kw of
+    "int" -> Just (rest, Keyword CInt)
+    "return" -> Just (rest, Keyword CReturn)
+    _ -> Nothing
 
 lex :: String -> [Token]
 lex = undefined
