@@ -1,7 +1,11 @@
-module HCC.Lexer where
+module HCC.Lexer
+  ( Keyword (..)
+  , Token (..)
+  , lexer
+  ) where
 
 import Control.Applicative
-import Data.Char (isAlpha, isAlphaNum, isDigit)
+import Data.Char (isAlpha, isAlphaNum, isDigit, isSpace)
 
 data Keyword
   = CInt
@@ -93,5 +97,14 @@ keywordLexer = Lexer $ \input -> do
     "return" -> Just (rest, Keyword CReturn)
     _ -> Nothing
 
-lex :: String -> [Token]
-lex = undefined
+tokenLexer :: Lexer Token
+tokenLexer = grammarLexer <|> keywordLexer <|> identifierLexer <|> integerConstantLexer
+
+lexer :: String -> Maybe [Token]
+lexer [] = Just []
+lexer input@(c : cs)
+  | isSpace c = lexer cs
+  | otherwise = do
+      (input', tok) <- runLexer tokenLexer input
+      toks <- lexer input'
+      Just (tok : toks)
