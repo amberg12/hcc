@@ -1,6 +1,7 @@
 module HCC.Parser where
 
-import HCC.Parser (Token)
+import Control.Applicative
+import HCC.Lexer (Token (..))
 
 data Program = Program
   { function :: Function
@@ -21,7 +22,7 @@ data Expression
   deriving (Show)
 
 newtype Parser a = Parser
-  { runParser :: String -> Maybe (String, a)
+  { runParser :: [Token] -> Maybe ([Token], a)
   }
 
 instance Functor Parser where
@@ -39,6 +40,11 @@ instance Applicative Parser where
 instance Alternative Parser where
   empty = Parser $ \_ -> Nothing
   (Parser l1) <|> (Parser l2) = Parser $ \input -> l1 input <|> l2 input
+
+tokenParser :: Token -> Parser Token
+tokenParser tok = Parser $ \input -> case input of
+  (x : xs) | tok == x -> Just (xs, x)
+  _ -> Nothing
 
 parser :: [Token] -> Program
 parser = undefined

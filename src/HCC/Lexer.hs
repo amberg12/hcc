@@ -10,7 +10,7 @@ import Data.Char (isAlpha, isAlphaNum, isDigit, isSpace)
 data Keyword
   = CInt
   | CReturn
-  deriving (Show)
+  deriving (Show, Eq)
 
 data Token
   = OpenParenthesis
@@ -21,7 +21,7 @@ data Token
   | Keyword Keyword
   | Identifier String
   | IntegerConstant Integer
-  deriving (Show)
+  deriving (Show, Eq)
 
 newtype Lexer a = Lexer
   { runLexer :: String -> Maybe (String, a)
