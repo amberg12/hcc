@@ -1,6 +1,7 @@
 module HCC.Lexer where
 
 import Control.Applicative
+import Data.Char (isDigit)
 
 data Keyword
   = CInt
@@ -67,6 +68,15 @@ grammarLexer =
     <|> openBraceLexer
     <|> closeBraceLexer
     <|> semicolonLexer
+
+spanLexer :: (Char -> Bool) -> Lexer String
+spanLexer f = Lexer $ \input ->
+  case span f input of
+    ("", _) -> Nothing
+    (output, input') -> Just (input', output)
+
+integerConstantLexer :: Lexer Token
+integerConstantLexer = (\input -> IntegerConstant $ read input) <$> spanLexer isDigit
 
 lex :: String -> [Token]
 lex = undefined
