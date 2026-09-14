@@ -121,7 +121,7 @@ assembleProgram (IR.Program (function)) = Program $ assembleFunction function
 emitOperand :: Operand -> String
 emitOperand (Imm n) = "$" ++ (show n)
 emitOperand (Reg AX) = "%eax"
-emitOperand (Reg R10) = "%r10"
+emitOperand (Reg R10) = "%r10d"
 emitOperand (Stack offset) = "-" ++ (show offset) ++ "(%rbp)"
 
 emitInstruction :: Instruction -> String
