@@ -6,7 +6,9 @@ module HCC.Lexer
 
 import Control.Applicative
 import Data.Char (isAlpha, isAlphaNum, isDigit, isSpace)
+import qualified HCC.Parser as Parser
 
+-- Keywords are prefixed with C to avoid confusion
 data Keyword
   = CInt
   | CReturn
@@ -26,100 +28,77 @@ data Token
   | IntegerLiteral Integer
   deriving (Show, Eq)
 
-newtype Lexer a = Lexer
-  { runLexer :: String -> Maybe (String, a)
-  }
+type LexerParser = Parser.Parser Char
 
-instance Functor Lexer where
-  fmap f (Lexer l) = Lexer $ \input -> do
-    (input', x) <- l input
-    Just (input', f x)
+stringParser :: String -> LexerParser String
+stringParser = Parser.listParser
 
-instance Applicative Lexer where
-  pure x = Lexer $ \input -> Just (input, x)
-  (Lexer l1) <*> (Lexer l2) = Lexer $ \input -> do
-    (input', f) <- l1 input
-    (input'', a) <- l2 input'
-    Just (input'', f a)
+openParenthesisParser :: LexerParser Token
+openParenthesisParser = (\_ -> OpenParenthesis) <$> stringParser "("
 
-instance Alternative Lexer where
-  empty = Lexer $ \_ -> Nothing
-  (Lexer l1) <|> (Lexer l2) = Lexer $ \input -> l1 input <|> l2 input
+closerParenthesisParser :: LexerParser Token
+closerParenthesisParser = (\_ -> CloseParenthesis) <$> stringParser ")"
 
-charLexer :: Char -> Lexer Char
-charLexer c = Lexer $ \input -> case input of
-  (x : xs) | x == c -> Just (xs, c)
-  _ -> Nothing
+openBraceParser :: LexerParser Token
+openBraceParser = (\_ -> OpenBrace) <$> stringParser "{"
 
-stringLexer :: String -> Lexer String
-stringLexer = traverse charLexer
+closeBraceParser :: LexerParser Token
+closeBraceParser = (\_ -> CloseBrace) <$> stringParser "}"
 
-openParenthesisLexer :: Lexer Token
-openParenthesisLexer = (\_ -> OpenParenthesis) <$> stringLexer "("
+semiColonParser :: LexerParser Token
+semiColonParser = (\_ -> Semicolon) <$> stringParser ";"
 
-closeParenthesisLexer :: Lexer Token
-closeParenthesisLexer = (\_ -> CloseParenthesis) <$> stringLexer ")"
+negativeParser :: LexerParser Token
+negativeParser = (\_ -> Negative) <$> stringParser "-"
 
-openBraceLexer :: Lexer Token
-openBraceLexer = (\_ -> OpenBrace) <$> stringLexer "{"
+tildeParser :: LexerParser Token
+tildeParser = (\_ -> Tilde) <$> stringParser "~"
 
-closeBraceLexer :: Lexer Token
-closeBraceLexer = (\_ -> CloseBrace) <$> stringLexer "}"
+bangParser :: LexerParser Token
+bangParser = (\_ -> Bang) <$> stringParser "!"
 
-semicolonLexer :: Lexer Token
-semicolonLexer = (\_ -> Semicolon) <$> stringLexer ";"
+grammarParser :: LexerParser Token
+grammarParser =
+  openParenthesisParser
+    <|> closerParenthesisParser
+    <|> openBraceParser
+    <|> closeBraceParser
+    <|> semiColonParser
+    <|> negativeParser
+    <|> tildeParser
+    <|> bangParser
 
-negativeLexer :: Lexer Token
-negativeLexer = (\_ -> Negative) <$> stringLexer "-"
-
-tildeLexer :: Lexer Token
-tildeLexer = (\_ -> Tilde) <$> stringLexer "~"
-
-bangLexer :: Lexer Token
-bangLexer = (\_ -> Bang) <$> stringLexer "!"
-
-grammarLexer :: Lexer Token
-grammarLexer =
-  openParenthesisLexer
-    <|> closeParenthesisLexer
-    <|> openBraceLexer
-    <|> closeBraceLexer
-    <|> semicolonLexer
-    <|> negativeLexer
-    <|> tildeLexer
-    <|> bangLexer
-
-spanLexer :: (Char -> Bool) -> Lexer String
-spanLexer f = Lexer $ \input ->
+spanParser :: (Char -> Bool) -> LexerParser String
+spanParser f = Parser.Parser $ \input ->
   case span f input of
     ("", _) -> Nothing
     (output, input') -> Just (input', output)
 
-integerLiteralLexer :: Lexer Token
-integerLiteralLexer = (\input -> IntegerLiteral $ read input) <$> spanLexer isDigit
+integerLiteralParser :: LexerParser Token
+integerLiteralParser = (\input -> IntegerLiteral $ read input) <$> spanParser isDigit
 
-identifierLexer :: Lexer Token
-identifierLexer = Lexer $ \input ->
-  case runLexer (spanLexer isAlphaNum) input of
+identifierParser :: LexerParser Token
+identifierParser = Parser.Parser $ \input ->
+  case Parser.runParser (spanParser isAlphaNum) input of
     Just (output, i@(h : _)) | isAlpha h -> Just (output, Identifier i)
     _ -> Nothing
 
-keywordLexer :: Lexer Token
-keywordLexer = Lexer $ \input -> do
-  (rest, kw) <- runLexer (spanLexer isAlphaNum) input
+keywordParser :: LexerParser Token
+keywordParser = Parser.Parser $ \input -> do
+  (rest, kw) <- Parser.runParser (spanParser isAlphaNum) input
   case kw of
     "int" -> Just (rest, Keyword CInt)
     "return" -> Just (rest, Keyword CReturn)
     _ -> Nothing
 
-tokenLexer :: Lexer Token
-tokenLexer = grammarLexer <|> keywordLexer <|> identifierLexer <|> integerLiteralLexer
+tokenParser :: LexerParser Token
+tokenParser = grammarParser <|> keywordParser <|> identifierParser <|> integerLiteralParser
 
 lexer :: String -> Maybe [Token]
 lexer [] = Just []
 lexer input@(c : cs)
   | isSpace c = lexer cs
   | otherwise = do
-      (input', tok) <- runLexer tokenLexer input
+      (input', tok) <- Parser.runParser tokenParser input
       toks <- lexer input'
       Just (tok : toks)

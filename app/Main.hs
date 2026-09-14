@@ -5,9 +5,9 @@ import System.Exit (exitFailure)
 import System.FilePath (replaceExtension)
 import System.IO (hPutStrLn, stderr)
 
+import HCC.AST (ast)
 import HCC.Assembly (assemble)
 import HCC.Lexer (lexer)
-import HCC.Parser (parser)
 
 main :: IO ()
 main = do
@@ -27,7 +27,7 @@ compile path = do
       hPutStrLn stderr "Lexer error"
       exitFailure
     Just toks ->
-      case parser toks of
+      case ast toks of
         Nothing -> do
           hPutStrLn stderr "Parser error"
           exitFailure
