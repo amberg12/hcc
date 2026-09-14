@@ -5,7 +5,6 @@ all: build
 
 .PHONY: build
 build:
-> cabal update
 > cabal build
 > cp $(shell cabal list-bin exe:hcc) .
 

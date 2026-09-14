@@ -7,6 +7,7 @@ import System.IO (hPutStrLn, stderr)
 
 import HCC.AST (ast)
 import HCC.Assembly (assemble)
+import HCC.IR (emitIR)
 import HCC.Lexer (lexer)
 
 main :: IO ()
@@ -33,4 +34,4 @@ compile path = do
           exitFailure
         Just ast -> do
           let outPath = replaceExtension path ".s"
-          writeFile outPath (assemble ast)
+          writeFile outPath (assemble $ emitIR ast)
