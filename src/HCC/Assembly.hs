@@ -16,7 +16,6 @@ assembleStatement :: Statement -> String
 assembleStatement (Return expr) = (assembleExpression expr) ++ "  ret\n"
 
 assembleFunction :: Function -> String
-assembleFunction (Function "main" stmt) = assembleFunction (Function "_main" stmt)
 assembleFunction (Function idnt stmt) =
   ".globl "
     ++ idnt
