@@ -1,0 +1,28 @@
+#!/usr/bin/env bash
+#
+# Turns a c file into a test
+#
+# Usage: make-test [c-source-file]
+#
+# Outputs `compiler-exit-code.txt`, `exit-code.txt` and `stdout.txt`
+
+if (($# != 1))
+then
+  echo "Usage: make-test [c-source-file]"
+  exit 1
+fi
+
+c_source_file="$1"
+test_directory=$(dirname "$1")
+out_file=$(mktemp)
+
+gcc $c_source_file -o $out_file >/dev/null 2>&1
+gcc_exit=$?
+
+chmod +x "${out_file}"
+test_file_stdout=$($out_file)
+test_exit=$?
+
+echo "${gcc_exit}" > "${test_directory}/compiler-exit-code.txt"
+echo "${test_exit}" > "${test_directory}/exit-code.txt"
+echo "${test_file_stdout}" > "${test_directory}/stdout.txt"

@@ -11,6 +11,13 @@ import HCC.Parser
 
 assembleExpression :: Expression -> String
 assembleExpression (IntegerConstant n) = "  movl $" ++ (show n) ++ ", %eax\n"
+assembleExpression (Negation expr) = (assembleExpression expr) ++ "  neg %eax\n"
+assembleExpression (BitwiseCompliment expr) = (assembleExpression expr) ++ "  not %eax\n"
+assembleExpression (LogicalNegation expr) =
+  (assembleExpression expr)
+    ++ "  cmpl $0, %eax\n"
+    ++ "  movl $0, %eax\n"
+    ++ "  sete %al\n"
 
 assembleStatement :: Statement -> String
 assembleStatement (Return expr) = (assembleExpression expr) ++ "  ret\n"
