@@ -6,9 +6,9 @@ import Control.Monad.State
 import Data.List (find)
 import qualified HCC.IR as IR
 
-data Program = Program Function
+data Program = Program Function deriving (Show)
 
-data Function = Function (String, [Instruction])
+data Function = Function (String, [Instruction]) deriving (Show)
 
 data Instruction
   = Mov (Operand, Operand)
@@ -108,7 +108,7 @@ assembleInstruction (IR.UnaryLogicalNegation (src, dst)) =
   aDst = assembleValue dst
 
 assembleFunction :: IR.Function -> Function
-assembleFunction (IR.Function (name, instructions)) = Function (name, pass'')
+assembleFunction (IR.Function (name, instructions)) = Function (name, pass''')
  where
   pass = concat $ map assembleInstruction instructions
   (stackSize, pass') = resolvePseudo pass
@@ -118,5 +118,37 @@ assembleFunction (IR.Function (name, instructions)) = Function (name, pass'')
 assembleProgram :: IR.Program -> Program
 assembleProgram (IR.Program (function)) = Program $ assembleFunction function
 
+emitOperand :: Operand -> String
+emitOperand (Imm n) = "$" ++ (show n)
+emitOperand (Reg AX) = "%eax"
+emitOperand (Reg R10) = "%r10"
+emitOperand (Stack offset) = "-" ++ (show offset) ++ "(%rbp)"
+
+emitInstruction :: Instruction -> String
+emitInstruction (Mov (src, dst)) = "  movl " ++ emitOperand src ++ ", " ++ emitOperand dst ++ "\n"
+emitInstruction (UnaryNegation src) = "  negl " ++ emitOperand src ++ "\n"
+emitInstruction (UnaryLogicalNegation src) =
+  "  cmpl $0 %eax\n"
+    ++ "  movl $0 %eax\n"
+    ++ "  sete %al\n"
+emitInstruction (UnaryBitwiseCompliment src) = "  notl " ++ emitOperand src ++ "\n"
+emitInstruction (AllocateStack n) = "  subq $" ++ show n ++ ", %rsp\n"
+emitInstruction (Ret) =
+  "  movq %rbp, %rsp\n"
+    ++ "  popq %rbp\n"
+    ++ "  ret\n"
+
+emitFunction :: Function -> String
+emitFunction (Function (identifier, instructions)) =
+  "  .globl main\n"
+    ++ "main:\n"
+    ++ "  pushq %rbp\n"
+    ++ "  movq %rsp, %rbp\n"
+    ++ concat (map emitInstruction instructions)
+
+emitProgram :: Program -> String
+emitProgram (Program function) =
+  (emitFunction function) ++ ".section .note.GNU-stack,\"\",@progbits\n"
+
 assemble :: IR.Program -> String
-assemble program = undefined
+assemble program = emitProgram $ assembleProgram program
