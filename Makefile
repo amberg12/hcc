@@ -21,3 +21,12 @@ format:
 test: build
 > chmod +x ./tests/test.sh
 > ./tests/test.sh
+
+TESTS := $(patsubst ./tests/resources/%/main.c,%,$(wildcard ./tests/resources/*/main.c))
+
+.PHONY: contsruct-tests
+construct-tests: $(TESTS)
+
+.PHONY: $(TESTS)
+$(TESTS):
+> ./scripts/make-test ./tests/resources/$@/main.c
