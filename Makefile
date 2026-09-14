@@ -16,3 +16,8 @@ run:
 .PHONY: format
 format:
 > git ls-files -z '*.hs' | xargs -P 1 -0 fourmolu --mode inplace
+
+.PHONY: test
+test: build
+> chmod +x ./tests/test.sh
+> ./tests/test.sh

@@ -21,8 +21,18 @@ main = do
 compile :: FilePath -> IO ()
 compile path = do
   source <- readFile path
-  let Just toks = lexer source
-  let Just ast = parser toks
-  let outPath = replaceExtension path ".s"
-  writeFile outPath (assemble ast)
-  putStrLn ("Wrote " ++ outPath)
+
+  case lexer source of
+    Nothing -> do
+      hPutStrLn stderr "Lexer error"
+      exitFailure
+
+    Just toks ->
+      case parser toks of
+        Nothing -> do
+          hPutStrLn stderr "Parser error"
+          exitFailure
+
+        Just ast -> do
+          let outPath = replaceExtension path ".s"
+          writeFile outPath (assemble ast)
