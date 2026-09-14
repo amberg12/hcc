@@ -15,8 +15,8 @@ data Program = Program
   deriving (Show)
 
 data Function = Function
-  { identifier :: String
-  , statement :: Statement
+  { functionIdentifier :: String
+  , functionStatement :: Statement
   }
   deriving (Show)
 
