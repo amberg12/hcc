@@ -20,6 +20,7 @@ assembleFunction (Function "main" stmt) = assembleFunction (Function "_main" stm
 assembleFunction (Function idnt stmt) =
   ".globl "
     ++ idnt
+    ++ "\n"
     ++ idnt
     ++ ": \n"
     ++ (assembleStatement stmt)
