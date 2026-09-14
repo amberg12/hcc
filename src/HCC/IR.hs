@@ -1,4 +1,12 @@
-module HCC.IR where
+module HCC.IR
+  ( Program (..)
+  , Function (..)
+  , Constant (..)
+  , Variable (..)
+  , Value (..)
+  , Instruction (..)
+  , emitIR
+  ) where
 
 import Control.Monad.State
 import qualified HCC.AST as AST
@@ -67,3 +75,9 @@ emitFunction :: AST.Function -> Function
 emitFunction (AST.Function name body) = Function (name, instructions s)
  where
   s = execState (emitIRStatement body) $ GeneratorState {nextTemp = 0, instructions = []}
+
+emitProgram :: AST.Program -> Program
+emitProgram p = Program $ emitFunction $ AST.function p
+
+emitIR :: AST.Program -> Program
+emitIR = emitProgram
