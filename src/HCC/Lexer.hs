@@ -18,6 +18,9 @@ data Token
   | OpenBrace
   | CloseBrace
   | Semicolon
+  | Negative
+  | Tilde
+  | Bang
   | Keyword Keyword
   | Identifier String
   | IntegerLiteral Integer
@@ -66,6 +69,15 @@ closeBraceLexer = (\_ -> CloseBrace) <$> stringLexer "}"
 semicolonLexer :: Lexer Token
 semicolonLexer = (\_ -> Semicolon) <$> stringLexer ";"
 
+negativeLexer :: Lexer Token
+negativeLexer = (\_ -> Negative) <$> stringLexer "-"
+
+tildeLexer :: Lexer Token
+tildeLexer = (\_ -> Tilde) <$> stringLexer "~"
+
+bangLexer :: Lexer Token
+bangLexer = (\_ -> Bang) <$> stringLexer "!"
+
 grammarLexer :: Lexer Token
 grammarLexer =
   openParenthesisLexer
@@ -73,6 +85,9 @@ grammarLexer =
     <|> openBraceLexer
     <|> closeBraceLexer
     <|> semicolonLexer
+    <|> negativeLexer
+    <|> tildeLexer
+    <|> bangLexer
 
 spanLexer :: (Char -> Bool) -> Lexer String
 spanLexer f = Lexer $ \input ->

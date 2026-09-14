@@ -26,6 +26,9 @@ data Statement
 
 data Expression
   = IntegerConstant Integer
+  | Negation Expression
+  | BitwiseCompliment Expression
+  | LogicalNegation Expression
   deriving (Show)
 
 newtype Parser a = Parser
@@ -63,8 +66,24 @@ identifierParser = Parser $ \input -> case input of
   (Identifier n : xs) -> Just (xs, n)
   _ -> Nothing
 
+integerConstantParser :: Parser Expression
+integerConstantParser = IntegerConstant <$> integerParser
+
+negationParser :: Parser Expression
+negationParser = Negation <$> ((tokenParser Negative) *> expressionParser)
+
+bitwiseComplimentParser :: Parser Expression
+bitwiseComplimentParser = BitwiseCompliment <$> ((tokenParser Tilde) *> expressionParser)
+
+logicalNegationParser :: Parser Expression
+logicalNegationParser = LogicalNegation <$> ((tokenParser Bang) *> expressionParser)
+
 expressionParser :: Parser Expression
-expressionParser = IntegerConstant <$> integerParser
+expressionParser =
+  integerConstantParser
+    <|> negationParser
+    <|> bitwiseComplimentParser
+    <|> logicalNegationParser
 
 returnParser :: Parser Statement
 returnParser =
