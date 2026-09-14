@@ -1,1 +1,4 @@
 dist-newstyle/**/*
+hcc
+out
+*/**/*.s

@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+
+FILE=$1
+gcc -m32 $FILE -o out
