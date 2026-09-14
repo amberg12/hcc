@@ -1,113 +1,35 @@
 module HCC.Parser
-  ( Program (..)
-  , Function (..)
-  , Statement (..)
-  , Expression (..)
-  , parser
+  ( Parser (..)
+  , unitParser
+  , listParser
   ) where
 
 import Control.Applicative
-import HCC.Lexer (Keyword (..), Token (..))
 
-data Program = Program
-  { function :: Function
-  }
-  deriving (Show)
-
-data Function = Function
-  { functionIdentifier :: String
-  , functionStatement :: Statement
-  }
-  deriving (Show)
-
-data Statement
-  = Return Expression
-  deriving (Show)
-
-data Expression
-  = IntegerConstant Integer
-  | Negation Expression
-  | BitwiseCompliment Expression
-  | LogicalNegation Expression
-  deriving (Show)
-
-newtype Parser a = Parser
-  { runParser :: [Token] -> Maybe ([Token], a)
+newtype Parser stream out = Parser
+  { runParser :: [stream] -> Maybe ([stream], out)
   }
 
-instance Functor Parser where
+instance Functor (Parser stream) where
   fmap f (Parser l) = Parser $ \input -> do
     (input', x) <- l input
     Just (input', f x)
 
-instance Applicative Parser where
+instance Applicative (Parser stream) where
   pure x = Parser $ \input -> Just (input, x)
   (Parser l1) <*> (Parser l2) = Parser $ \input -> do
     (input', f) <- l1 input
     (input'', a) <- l2 input'
     Just (input'', f a)
 
-instance Alternative Parser where
+instance Alternative (Parser stream) where
   empty = Parser $ \_ -> Nothing
   (Parser l1) <|> (Parser l2) = Parser $ \input -> l1 input <|> l2 input
 
-tokenParser :: Token -> Parser Token
-tokenParser tok = Parser $ \input -> case input of
-  (x : xs) | tok == x -> Just (xs, x)
+unitParser :: (Eq a) => a -> Parser a a
+unitParser x = Parser $ \input -> case input of
+  y : ys | x == y -> Just (ys, y)
   _ -> Nothing
 
-integerParser :: Parser Integer
-integerParser = Parser $ \input -> case input of
-  (IntegerLiteral n : xs) -> Just (xs, n)
-  _ -> Nothing
-
-identifierParser :: Parser String
-identifierParser = Parser $ \input -> case input of
-  (Identifier n : xs) -> Just (xs, n)
-  _ -> Nothing
-
-integerConstantParser :: Parser Expression
-integerConstantParser = IntegerConstant <$> integerParser
-
-negationParser :: Parser Expression
-negationParser = Negation <$> ((tokenParser Negative) *> expressionParser)
-
-bitwiseComplimentParser :: Parser Expression
-bitwiseComplimentParser = BitwiseCompliment <$> ((tokenParser Tilde) *> expressionParser)
-
-logicalNegationParser :: Parser Expression
-logicalNegationParser = LogicalNegation <$> ((tokenParser Bang) *> expressionParser)
-
-expressionParser :: Parser Expression
-expressionParser =
-  integerConstantParser
-    <|> negationParser
-    <|> bitwiseComplimentParser
-    <|> logicalNegationParser
-
-returnParser :: Parser Statement
-returnParser =
-  Return <$> (tokenParser (Keyword CReturn) *> expressionParser <* tokenParser Semicolon)
-
-statementParser :: Parser Statement
-statementParser = returnParser
-
-functionParser :: Parser Function
-functionParser =
-  Function
-    <$> (tokenParser (Keyword CInt) *> identifierParser)
-    <*> ( tokenParser OpenParenthesis
-            *> tokenParser CloseParenthesis
-            *> tokenParser OpenBrace
-            *> statementParser
-            <* tokenParser CloseBrace
-        )
-
-programParser :: Parser Program
-programParser =
-  Program <$> functionParser
-
-parser :: [Token] -> Maybe Program
-parser tokens = case runParser programParser tokens of
-  Just ([], program) -> Just program
-  _ -> Nothing
+listParser :: (Eq a) => [a] -> Parser a [a]
+listParser = traverse unitParser
