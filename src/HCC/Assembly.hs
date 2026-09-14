@@ -8,7 +8,7 @@ import qualified HCC.IR as IR
 
 data Program = Program Function
 
-data Function = Function (String, Integer, [Instruction])
+data Function = Function (String, [Instruction])
 
 data Instruction
   = Mov (Operand, Operand)
@@ -47,9 +47,12 @@ resolvePseudoOperand (Pseudo identifier) = do
       let newStackSize = stackSize + 4
       put $ PseudoStack ([(identifier, newStackSize)] ++ map) newStackSize
       pure $ Stack newStackSize
- where
-
 resolvePseudoOperand (other) = pure other
+
+resolveInvalidMov :: Instruction -> [Instruction]
+resolveInvalidMov (Mov (Stack src, Stack dst)) =
+  [Mov (Stack src, Reg R10), Mov (Reg R10, Stack dst)]
+resolveInvalidMov other = [other]
 
 resolvePseudoInstruction :: Instruction -> PseudoStackState Instruction
 resolvePseudoInstruction (Mov (src, dst)) = do
@@ -105,10 +108,12 @@ assembleInstruction (IR.UnaryLogicalNegation (src, dst)) =
   aDst = assembleValue dst
 
 assembleFunction :: IR.Function -> Function
-assembleFunction (IR.Function (name, instructions)) = Function (name, stackSize, pass')
+assembleFunction (IR.Function (name, instructions)) = Function (name, pass'')
  where
   pass = concat $ map assembleInstruction instructions
   (stackSize, pass') = resolvePseudo pass
+  pass'' = concat $ map resolveInvalidMov pass'
+  pass''' = [AllocateStack stackSize] ++ pass''
 
 assembleProgram :: IR.Program -> Program
 assembleProgram (IR.Program (function)) = Program $ assembleFunction function
