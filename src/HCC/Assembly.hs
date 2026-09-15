@@ -5,6 +5,7 @@ module HCC.Assembly
 import Control.Monad.State
 import Data.List (find)
 import qualified HCC.IR as IR
+import HCC.Util (map2, map3)
 
 data Program = Program Function deriving (Show)
 
@@ -15,6 +16,7 @@ data Instruction
   | UnaryNegation Operand
   | UnaryLogicalNegation Operand
   | UnaryBitwiseCompliment Operand
+  | Addition (Operand, Operand)
   | AllocateStack Integer
   | Ret
   deriving (Show)
@@ -68,6 +70,10 @@ resolvePseudoInstruction (UnaryLogicalNegation src) = do
 resolvePseudoInstruction (UnaryBitwiseCompliment src) = do
   src' <- resolvePseudoOperand src
   pure $ UnaryBitwiseCompliment src'
+resolvePseudoInstruction (Addition (src, dst)) = do
+  src' <- resolvePseudoOperand src
+  dst' <- resolvePseudoOperand dst
+  pure $ Addition (src', dst')
 resolvePseudoInstruction (AllocateStack n) =
   pure $ AllocateStack n
 resolvePseudoInstruction Ret =
@@ -106,6 +112,10 @@ assembleInstruction (IR.UnaryLogicalNegation (src, dst)) =
  where
   aSrc = assembleValue src
   aDst = assembleValue dst
+assembleInstruction (IR.Addition rs) =
+  [Mov (src, dst), Addition (src', dst)]
+ where
+  (src, src', dst) = map3 assembleValue rs
 
 assembleFunction :: IR.Function -> Function
 assembleFunction (IR.Function (name, instructions)) = Function (name, pass''')
@@ -137,6 +147,7 @@ emitInstruction (Ret) =
   "  movq %rbp, %rsp\n"
     ++ "  popq %rbp\n"
     ++ "  ret\n"
+emitInstruction (Addition (src, dst)) = "  addl " ++ emitOperand src ++ ", " ++ emitOperand dst ++ "\n"
 
 emitFunction :: Function -> String
 emitFunction (Function (identifier, instructions)) =
