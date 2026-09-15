@@ -31,6 +31,7 @@ data Instruction
   | UnaryBitwiseCompliment (Value, Value)
   | UnaryLogicalNegation (Value, Value)
   | Addition (Value, Value, Value)
+  | Multiplication (Value, Value, Value)
   deriving (Show)
 
 data GeneratorState = GeneratorState
@@ -71,11 +72,17 @@ emitIRExpression (AST.LogicalNegation expr) = do
   dst <- tempVariable
   addInstruction $ UnaryLogicalNegation (src, Var dst)
   pure (Var dst)
-emitIRExpression (AST.Addition (lhs, rhs)) = do
-  src <- emitIRExpression lhs
-  src' <- emitIRExpression rhs
+emitIRExpression (AST.Addition (expr, expr')) = do
+  src <- emitIRExpression expr
+  src' <- emitIRExpression expr'
   dst <- tempVariable
   addInstruction $ Addition (src, src', Var dst)
+  pure $ Var dst
+emitIRExpression (AST.Multiplication (expr, expr')) = do
+  src <- emitIRExpression expr
+  src' <- emitIRExpression expr'
+  dst <- tempVariable
+  addInstruction $ Multiplication (src, src', Var dst)
   pure $ Var dst
 
 emitFunction :: AST.Function -> Function

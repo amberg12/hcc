@@ -17,6 +17,7 @@ data Instruction
   | UnaryLogicalNegation Operand
   | UnaryBitwiseCompliment Operand
   | Addition (Operand, Operand)
+  | Multiplication (Operand, Operand)
   | AllocateStack Integer
   | Ret
   deriving (Show)
@@ -74,6 +75,10 @@ resolvePseudoInstruction (Addition (src, dst)) = do
   src' <- resolvePseudoOperand src
   dst' <- resolvePseudoOperand dst
   pure $ Addition (src', dst')
+resolvePseudoInstruction (Multiplication (src, dst)) = do
+  src' <- resolvePseudoOperand src
+  dst' <- resolvePseudoOperand dst
+  pure $ Multiplication (src', dst')
 resolvePseudoInstruction (AllocateStack n) =
   pure $ AllocateStack n
 resolvePseudoInstruction Ret =
@@ -116,6 +121,10 @@ assembleInstruction (IR.Addition rs) =
   [Mov (src, dst), Addition (src', dst)]
  where
   (src, src', dst) = map3 assembleValue rs
+assembleInstruction (IR.Multiplication rs) =
+  [Mov (src, Reg R10), Multiplication (src', Reg R10), Mov (Reg R10, dst)]
+ where
+  (src, src', dst) = map3 assembleValue rs
 
 assembleFunction :: IR.Function -> Function
 assembleFunction (IR.Function (name, instructions)) = Function (name, pass''')
@@ -148,6 +157,7 @@ emitInstruction (Ret) =
     ++ "  popq %rbp\n"
     ++ "  ret\n"
 emitInstruction (Addition (src, dst)) = "  addl " ++ emitOperand src ++ ", " ++ emitOperand dst ++ "\n"
+emitInstruction (Multiplication (src, dst)) = "  imull " ++ emitOperand src ++ ", " ++ emitOperand dst ++ "\n"
 
 emitFunction :: Function -> String
 emitFunction (Function (identifier, instructions)) =
