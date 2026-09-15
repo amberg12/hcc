@@ -20,7 +20,10 @@ data Token
   | OpenBrace
   | CloseBrace
   | Semicolon
+  | Plus
   | Negative
+  | Asterisk
+  | ForwardSlash
   | Tilde
   | Bang
   | Keyword Keyword
@@ -48,8 +51,17 @@ closeBraceParser = (\_ -> CloseBrace) <$> stringParser "}"
 semiColonParser :: LexerParser Token
 semiColonParser = (\_ -> Semicolon) <$> stringParser ";"
 
+plusParser :: LexerParser Token
+plusParser = (\_ -> Plus) <$> stringParser "+"
+
 negativeParser :: LexerParser Token
 negativeParser = (\_ -> Negative) <$> stringParser "-"
+
+asteriskParser :: LexerParser Token
+asteriskParser = (\_ -> Asterisk) <$> stringParser "*"
+
+forwardSlashParser :: LexerParser Token
+forwardSlashParser = (\_ -> ForwardSlash) <$> stringParser "/"
 
 tildeParser :: LexerParser Token
 tildeParser = (\_ -> Tilde) <$> stringParser "~"
@@ -64,7 +76,10 @@ grammarParser =
     <|> openBraceParser
     <|> closeBraceParser
     <|> semiColonParser
+    <|> plusParser
     <|> negativeParser
+    <|> asteriskParser
+    <|> forwardSlashParser
     <|> tildeParser
     <|> bangParser
 
