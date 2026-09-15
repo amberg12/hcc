@@ -33,6 +33,7 @@ data Instruction
   | Addition (Value, Value, Value)
   | Subtraction (Value, Value, Value)
   | Multiplication (Value, Value, Value)
+  | Division (Value, Value, Value)
   deriving (Show)
 
 data GeneratorState = GeneratorState
@@ -90,6 +91,12 @@ emitIRExpression (AST.Multiplication (expr, expr')) = do
   src' <- emitIRExpression expr'
   dst <- tempVariable
   addInstruction $ Multiplication (src, src', Var dst)
+  pure $ Var dst
+emitIRExpression (AST.Division (expr, expr')) = do
+  src <- emitIRExpression expr
+  src' <- emitIRExpression expr'
+  dst <- tempVariable
+  addInstruction $ Division (src, src', Var dst)
   pure $ Var dst
 
 emitFunction :: AST.Function -> Function

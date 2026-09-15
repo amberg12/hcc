@@ -19,7 +19,9 @@ data Instruction
   | Addition (Operand, Operand)
   | Subtraction (Operand, Operand)
   | Multiplication (Operand, Operand)
+  | Division Operand
   | AllocateStack Integer
+  | CDQ
   | Ret
   deriving (Show)
 
@@ -32,6 +34,7 @@ data Operand
 
 data Register
   = AX
+  | DX
   | R10
   deriving (Show, Eq)
 
@@ -84,8 +87,13 @@ resolvePseudoInstruction (Multiplication (src, dst)) = do
   src' <- resolvePseudoOperand src
   dst' <- resolvePseudoOperand dst
   pure $ Multiplication (src', dst')
+resolvePseudoInstruction (Division src) = do
+  src' <- resolvePseudoOperand src
+  pure $ Division src
 resolvePseudoInstruction (AllocateStack n) =
   pure $ AllocateStack n
+resolvePseudoInstruction CDQ =
+  pure CDQ
 resolvePseudoInstruction Ret =
   pure Ret
 
@@ -134,6 +142,10 @@ assembleInstruction (IR.Multiplication rs) =
   [Mov (src, Reg R10), Multiplication (src', Reg R10), Mov (Reg R10, dst)]
  where
   (src, src', dst) = map3 assembleValue rs
+assembleInstruction (IR.Division rs) =
+  [Mov (src, Reg AX), Mov (src', Reg R10), CDQ, Division $ Reg R10, Mov (Reg AX, dst)]
+ where
+  (src, src', dst) = map3 assembleValue rs
 
 assembleFunction :: IR.Function -> Function
 assembleFunction (IR.Function (name, instructions)) = Function (name, pass''')
@@ -149,6 +161,7 @@ assembleProgram (IR.Program (function)) = Program $ assembleFunction function
 emitOperand :: Operand -> String
 emitOperand (Imm n) = "$" ++ (show n)
 emitOperand (Reg AX) = "%eax"
+emitOperand (Reg DX) = "%edx"
 emitOperand (Reg R10) = "%r10d"
 emitOperand (Stack offset) = "-" ++ (show offset) ++ "(%rbp)"
 
@@ -161,13 +174,15 @@ emitInstruction (UnaryLogicalNegation src) =
     ++ "  sete %al\n"
 emitInstruction (UnaryBitwiseCompliment src) = "  notl " ++ emitOperand src ++ "\n"
 emitInstruction (AllocateStack n) = "  subq $" ++ show n ++ ", %rsp\n"
+emitInstruction (Addition (src, dst)) = "  addl " ++ emitOperand src ++ ", " ++ emitOperand dst ++ "\n"
+emitInstruction (Subtraction (src, dst)) = "  subl " ++ emitOperand src ++ ", " ++ emitOperand dst ++ "\n"
+emitInstruction (Multiplication (src, dst)) = "  imull " ++ emitOperand src ++ ", " ++ emitOperand dst ++ "\n"
+emitInstruction (Division src) = "  idivl " ++ emitOperand src ++ "\n"
+emitInstruction (CDQ) = "  cdq\n"
 emitInstruction (Ret) =
   "  movq %rbp, %rsp\n"
     ++ "  popq %rbp\n"
     ++ "  ret\n"
-emitInstruction (Addition (src, dst)) = "  addl " ++ emitOperand src ++ ", " ++ emitOperand dst ++ "\n"
-emitInstruction (Subtraction (src, dst)) = "  subl " ++ emitOperand src ++ ", " ++ emitOperand dst ++ "\n"
-emitInstruction (Multiplication (src, dst)) = "  imull " ++ emitOperand src ++ ", " ++ emitOperand dst ++ "\n"
 
 emitFunction :: Function -> String
 emitFunction (Function (identifier, instructions)) =
