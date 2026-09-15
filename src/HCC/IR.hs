@@ -31,6 +31,7 @@ data Instruction
   | UnaryBitwiseCompliment (Value, Value)
   | UnaryLogicalNegation (Value, Value)
   | Addition (Value, Value, Value)
+  | Subtraction (Value, Value, Value)
   | Multiplication (Value, Value, Value)
   deriving (Show)
 
@@ -77,6 +78,12 @@ emitIRExpression (AST.Addition (expr, expr')) = do
   src' <- emitIRExpression expr'
   dst <- tempVariable
   addInstruction $ Addition (src, src', Var dst)
+  pure $ Var dst
+emitIRExpression (AST.Subtraction (expr, expr')) = do
+  src <- emitIRExpression expr
+  src' <- emitIRExpression expr'
+  dst <- tempVariable
+  addInstruction $ Subtraction (src, src', Var dst)
   pure $ Var dst
 emitIRExpression (AST.Multiplication (expr, expr')) = do
   src <- emitIRExpression expr
