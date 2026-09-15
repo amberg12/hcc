@@ -34,6 +34,7 @@ data Expression
   | Subtraction (Expression, Expression)
   | Multiplication (Expression, Expression)
   | Division (Expression, Expression)
+  | Modulo (Expression, Expression)
   deriving (Show)
 
 type AstParser = Parser.Parser Lexer.Token
@@ -60,10 +61,11 @@ expressionParser =
 
 termParser :: AstParser Expression
 termParser =
-  mulParser <|> divParser <|> factorParser
+  mulParser <|> divParser <|> modParser <|> factorParser
  where
   mulParser = Multiplication <$> ((,) <$> factorParser <*> (tokenParser Lexer.Asterisk *> factorParser))
   divParser = Division <$> ((,) <$> factorParser <*> (tokenParser Lexer.ForwardSlash *> factorParser))
+  modParser = Modulo <$> ((,) <$> factorParser <*> (tokenParser Lexer.Percentage *> factorParser))
 
 factorParser :: AstParser Expression
 factorParser =

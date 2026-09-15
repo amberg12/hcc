@@ -146,6 +146,10 @@ assembleInstruction (IR.Division rs) =
   [Mov (src, Reg AX), Mov (src', Reg R10), CDQ, Division $ Reg R10, Mov (Reg AX, dst)]
  where
   (src, src', dst) = map3 assembleValue rs
+assembleInstruction (IR.Modulo rs) =
+  [Mov (src, Reg AX), Mov (src', Reg R10), CDQ, Division $ Reg R10, Mov (Reg DX, dst)]
+ where
+  (src, src', dst) = map3 assembleValue rs
 
 assembleFunction :: IR.Function -> Function
 assembleFunction (IR.Function (name, instructions)) = Function (name, pass''')

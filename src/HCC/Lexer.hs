@@ -24,6 +24,7 @@ data Token
   | Negative
   | Asterisk
   | ForwardSlash
+  | Percentage
   | Tilde
   | Bang
   | Keyword Keyword
@@ -63,6 +64,9 @@ asteriskParser = (\_ -> Asterisk) <$> stringParser "*"
 forwardSlashParser :: LexerParser Token
 forwardSlashParser = (\_ -> ForwardSlash) <$> stringParser "/"
 
+percentageParser :: LexerParser Token
+percentageParser = (\_ -> Percentage) <$> stringParser "%"
+
 tildeParser :: LexerParser Token
 tildeParser = (\_ -> Tilde) <$> stringParser "~"
 
@@ -80,6 +84,7 @@ grammarParser =
     <|> negativeParser
     <|> asteriskParser
     <|> forwardSlashParser
+    <|> percentageParser
     <|> tildeParser
     <|> bangParser
 
