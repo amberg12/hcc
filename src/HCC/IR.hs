@@ -30,6 +30,11 @@ data Instruction
   | UnaryNegation (Value, Value)
   | UnaryBitwiseCompliment (Value, Value)
   | UnaryLogicalNegation (Value, Value)
+  | Addition (Value, Value, Value)
+  | Subtraction (Value, Value, Value)
+  | Multiplication (Value, Value, Value)
+  | Division (Value, Value, Value)
+  | Modulo (Value, Value, Value)
   deriving (Show)
 
 data GeneratorState = GeneratorState
@@ -70,6 +75,36 @@ emitIRExpression (AST.LogicalNegation expr) = do
   dst <- tempVariable
   addInstruction $ UnaryLogicalNegation (src, Var dst)
   pure (Var dst)
+emitIRExpression (AST.Addition (expr, expr')) = do
+  src <- emitIRExpression expr
+  src' <- emitIRExpression expr'
+  dst <- tempVariable
+  addInstruction $ Addition (src, src', Var dst)
+  pure $ Var dst
+emitIRExpression (AST.Subtraction (expr, expr')) = do
+  src <- emitIRExpression expr
+  src' <- emitIRExpression expr'
+  dst <- tempVariable
+  addInstruction $ Subtraction (src, src', Var dst)
+  pure $ Var dst
+emitIRExpression (AST.Multiplication (expr, expr')) = do
+  src <- emitIRExpression expr
+  src' <- emitIRExpression expr'
+  dst <- tempVariable
+  addInstruction $ Multiplication (src, src', Var dst)
+  pure $ Var dst
+emitIRExpression (AST.Division (expr, expr')) = do
+  src <- emitIRExpression expr
+  src' <- emitIRExpression expr'
+  dst <- tempVariable
+  addInstruction $ Division (src, src', Var dst)
+  pure $ Var dst
+emitIRExpression (AST.Modulo (expr, expr')) = do
+  src <- emitIRExpression expr
+  src' <- emitIRExpression expr'
+  dst <- tempVariable
+  addInstruction $ Modulo (src, src', Var dst)
+  pure $ Var dst
 
 emitFunction :: AST.Function -> Function
 emitFunction (AST.Function name body) = Function (name, instructions s)

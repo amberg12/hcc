@@ -26,6 +26,11 @@ instance Alternative (Parser stream) where
   empty = Parser $ \_ -> Nothing
   (Parser l1) <|> (Parser l2) = Parser $ \input -> l1 input <|> l2 input
 
+instance Monad (Parser stream) where
+  (Parser p) >>= f = Parser $ \input -> do
+    (input', x) <- p input
+    runParser (f x) input'
+
 unitParser :: (Eq a) => a -> Parser a a
 unitParser x = Parser $ \input -> case input of
   y : ys | x == y -> Just (ys, y)

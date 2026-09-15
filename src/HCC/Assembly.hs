@@ -5,6 +5,7 @@ module HCC.Assembly
 import Control.Monad.State
 import Data.List (find)
 import qualified HCC.IR as IR
+import HCC.Util (map2, map3)
 
 data Program = Program Function deriving (Show)
 
@@ -15,7 +16,12 @@ data Instruction
   | UnaryNegation Operand
   | UnaryLogicalNegation Operand
   | UnaryBitwiseCompliment Operand
+  | Addition (Operand, Operand)
+  | Subtraction (Operand, Operand)
+  | Multiplication (Operand, Operand)
+  | Division Operand
   | AllocateStack Integer
+  | CDQ
   | Ret
   deriving (Show)
 
@@ -28,7 +34,9 @@ data Operand
 
 data Register
   = AX
+  | DX
   | R10
+  | R11
   deriving (Show, Eq)
 
 data PseudoStack = PseudoStack
@@ -68,8 +76,25 @@ resolvePseudoInstruction (UnaryLogicalNegation src) = do
 resolvePseudoInstruction (UnaryBitwiseCompliment src) = do
   src' <- resolvePseudoOperand src
   pure $ UnaryBitwiseCompliment src'
+resolvePseudoInstruction (Addition (src, dst)) = do
+  src' <- resolvePseudoOperand src
+  dst' <- resolvePseudoOperand dst
+  pure $ Addition (src', dst')
+resolvePseudoInstruction (Subtraction (src, dst)) = do
+  src' <- resolvePseudoOperand src
+  dst' <- resolvePseudoOperand dst
+  pure $ Subtraction (src', dst')
+resolvePseudoInstruction (Multiplication (src, dst)) = do
+  src' <- resolvePseudoOperand src
+  dst' <- resolvePseudoOperand dst
+  pure $ Multiplication (src', dst')
+resolvePseudoInstruction (Division src) = do
+  src' <- resolvePseudoOperand src
+  pure $ Division src
 resolvePseudoInstruction (AllocateStack n) =
   pure $ AllocateStack n
+resolvePseudoInstruction CDQ =
+  pure CDQ
 resolvePseudoInstruction Ret =
   pure Ret
 
@@ -106,6 +131,30 @@ assembleInstruction (IR.UnaryLogicalNegation (src, dst)) =
  where
   aSrc = assembleValue src
   aDst = assembleValue dst
+assembleInstruction (IR.Addition rs) =
+  case (src', dst) of
+    (Pseudo _, Pseudo _) -> [Mov (src, Reg R11), Addition (src', Reg R11), Mov (Reg R11, dst)]
+    _ -> [Mov (src, dst), Addition (src', dst)]
+ where
+  (src, src', dst) = map3 assembleValue rs
+assembleInstruction (IR.Subtraction rs) =
+  case (src', dst) of
+    (Pseudo _, Pseudo _) -> [Mov (src, Reg R11), Subtraction (src', Reg R11), Mov (Reg R11, dst)]
+    _ -> [Mov (src, dst), Subtraction (src', dst)]
+ where
+  (src, src', dst) = map3 assembleValue rs
+assembleInstruction (IR.Multiplication rs) =
+  [Mov (src, Reg R11), Multiplication (src', Reg R11), Mov (Reg R11, dst)]
+ where
+  (src, src', dst) = map3 assembleValue rs
+assembleInstruction (IR.Division rs) =
+  [Mov (src, Reg AX), Mov (src', Reg R11), CDQ, Division $ Reg R11, Mov (Reg AX, dst)]
+ where
+  (src, src', dst) = map3 assembleValue rs
+assembleInstruction (IR.Modulo rs) =
+  [Mov (src, Reg AX), Mov (src', Reg R11), CDQ, Division $ Reg R11, Mov (Reg DX, dst)]
+ where
+  (src, src', dst) = map3 assembleValue rs
 
 assembleFunction :: IR.Function -> Function
 assembleFunction (IR.Function (name, instructions)) = Function (name, pass''')
@@ -121,7 +170,9 @@ assembleProgram (IR.Program (function)) = Program $ assembleFunction function
 emitOperand :: Operand -> String
 emitOperand (Imm n) = "$" ++ (show n)
 emitOperand (Reg AX) = "%eax"
+emitOperand (Reg DX) = "%edx"
 emitOperand (Reg R10) = "%r10d"
+emitOperand (Reg R11) = "%r11d"
 emitOperand (Stack offset) = "-" ++ (show offset) ++ "(%rbp)"
 
 emitInstruction :: Instruction -> String
@@ -133,6 +184,11 @@ emitInstruction (UnaryLogicalNegation src) =
     ++ "  sete %al\n"
 emitInstruction (UnaryBitwiseCompliment src) = "  notl " ++ emitOperand src ++ "\n"
 emitInstruction (AllocateStack n) = "  subq $" ++ show n ++ ", %rsp\n"
+emitInstruction (Addition (src, dst)) = "  addl " ++ emitOperand src ++ ", " ++ emitOperand dst ++ "\n"
+emitInstruction (Subtraction (src, dst)) = "  subl " ++ emitOperand src ++ ", " ++ emitOperand dst ++ "\n"
+emitInstruction (Multiplication (src, dst)) = "  imull " ++ emitOperand src ++ ", " ++ emitOperand dst ++ "\n"
+emitInstruction (Division src) = "  idivl " ++ emitOperand src ++ "\n"
+emitInstruction (CDQ) = "  cdq\n"
 emitInstruction (Ret) =
   "  movq %rbp, %rsp\n"
     ++ "  popq %rbp\n"
