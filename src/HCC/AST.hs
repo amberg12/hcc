@@ -53,19 +53,23 @@ identifierParser = Parser.Parser $ \input -> case input of
   _ -> Nothing
 
 expressionParser :: AstParser Expression
-expressionParser =
-  addParser <|> subParser <|> termParser
+expressionParser = do
+  first <- termParser
+  rest <- many ((,) <$> (addOp <|> subOp) <*> termParser)
+  pure $ foldl (\acc (ctor, next) -> ctor (acc, next)) first rest
  where
-  addParser = Addition <$> ((,) <$> termParser <*> (tokenParser Lexer.Plus *> termParser))
-  subParser = Subtraction <$> ((,) <$> termParser <*> (tokenParser Lexer.Negative *> termParser))
+  addOp = tokenParser Lexer.Plus *> pure Addition
+  subOp = tokenParser Lexer.Negative *> pure Subtraction
 
 termParser :: AstParser Expression
-termParser =
-  mulParser <|> divParser <|> modParser <|> factorParser
+termParser = do
+  first <- factorParser
+  rest <- many ((,) <$> (mulOp <|> divOp <|> modOp) <*> factorParser)
+  pure $ foldl (\acc (ctor, next) -> ctor (acc, next)) first rest
  where
-  mulParser = Multiplication <$> ((,) <$> factorParser <*> (tokenParser Lexer.Asterisk *> factorParser))
-  divParser = Division <$> ((,) <$> factorParser <*> (tokenParser Lexer.ForwardSlash *> factorParser))
-  modParser = Modulo <$> ((,) <$> factorParser <*> (tokenParser Lexer.Percentage *> factorParser))
+  mulOp = tokenParser Lexer.Asterisk *> pure Multiplication
+  divOp = tokenParser Lexer.ForwardSlash *> pure Division
+  modOp = tokenParser Lexer.Percentage *> pure Modulo
 
 factorParser :: AstParser Expression
 factorParser =
