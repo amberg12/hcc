@@ -30,6 +30,10 @@ data Expression
   | Negation Expression
   | BitwiseCompliment Expression
   | LogicalNegation Expression
+  | Addition (Expression, Expression)
+  | Subtraction (Expression, Expression)
+  | Multiplication (Expression, Expression)
+  | Division (Expression, Expression)
   deriving (Show)
 
 type AstParser = Parser.Parser Lexer.Token
@@ -47,24 +51,29 @@ identifierParser = Parser.Parser $ \input -> case input of
   (Lexer.Identifier n : xs) -> Just (xs, n)
   _ -> Nothing
 
-integerConstantParser :: AstParser Expression
-integerConstantParser = IntegerConstant <$> integerParser
-
-negationParser :: AstParser Expression
-negationParser = Negation <$> ((tokenParser Lexer.Negative) *> expressionParser)
-
-bitwiseComplimentParser :: AstParser Expression
-bitwiseComplimentParser = BitwiseCompliment <$> ((tokenParser Lexer.Tilde) *> expressionParser)
-
-logicalNegationParser :: AstParser Expression
-logicalNegationParser = LogicalNegation <$> ((tokenParser Lexer.Bang) *> expressionParser)
-
 expressionParser :: AstParser Expression
 expressionParser =
-  integerConstantParser
-    <|> negationParser
-    <|> bitwiseComplimentParser
-    <|> logicalNegationParser
+  addParser <|> subParser <|> termParser
+ where
+  addParser = Addition <$> ((,) <$> termParser <*> (tokenParser Lexer.Plus *> termParser))
+  subParser = Subtraction <$> ((,) <$> termParser <*> (tokenParser Lexer.Negative *> termParser))
+
+termParser :: AstParser Expression
+termParser =
+  mulParser <|> divParser <|> factorParser
+ where
+  mulParser = Multiplication <$> ((,) <$> factorParser <*> (tokenParser Lexer.Asterisk *> factorParser))
+  divParser = Division <$> ((,) <$> factorParser <*> (tokenParser Lexer.ForwardSlash *> factorParser))
+
+factorParser :: AstParser Expression
+factorParser =
+  parenParser <|> negParser <|> logicalNegParser <|> bitwiseComplimentParser <|> integerConstantParser
+ where
+  parenParser = (tokenParser (Lexer.OpenParenthesis) *> expressionParser <* tokenParser (Lexer.CloseParenthesis))
+  negParser = Negation <$> ((tokenParser Lexer.Negative) *> expressionParser)
+  logicalNegParser = LogicalNegation <$> ((tokenParser Lexer.Bang) *> expressionParser)
+  bitwiseComplimentParser = BitwiseCompliment <$> ((tokenParser Lexer.Tilde) *> expressionParser)
+  integerConstantParser = IntegerConstant <$> integerParser
 
 returnParser :: AstParser Statement
 returnParser =
