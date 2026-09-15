@@ -36,6 +36,7 @@ data Register
   = AX
   | DX
   | R10
+  | R11
   deriving (Show, Eq)
 
 data PseudoStack = PseudoStack
@@ -131,23 +132,27 @@ assembleInstruction (IR.UnaryLogicalNegation (src, dst)) =
   aSrc = assembleValue src
   aDst = assembleValue dst
 assembleInstruction (IR.Addition rs) =
-  [Mov (src, dst), Addition (src', dst)]
+  case (src', dst) of
+    (Pseudo _, Pseudo _) -> [Mov (src, Reg R11), Addition (src', Reg R11), Mov (Reg R11, dst)]
+    _ -> [Mov (src, dst), Addition (src', dst)]
  where
   (src, src', dst) = map3 assembleValue rs
 assembleInstruction (IR.Subtraction rs) =
-  [Mov (src, dst), Subtraction (src', dst)]
+  case (src', dst) of
+    (Pseudo _, Pseudo _) -> [Mov (src, Reg R11), Subtraction (src', Reg R11), Mov (Reg R11, dst)]
+    _ -> [Mov (src, dst), Subtraction (src', dst)]
  where
   (src, src', dst) = map3 assembleValue rs
 assembleInstruction (IR.Multiplication rs) =
-  [Mov (src, Reg R10), Multiplication (src', Reg R10), Mov (Reg R10, dst)]
+  [Mov (src, Reg R11), Multiplication (src', Reg R11), Mov (Reg R11, dst)]
  where
   (src, src', dst) = map3 assembleValue rs
 assembleInstruction (IR.Division rs) =
-  [Mov (src, Reg AX), Mov (src', Reg R10), CDQ, Division $ Reg R10, Mov (Reg AX, dst)]
+  [Mov (src, Reg AX), Mov (src', Reg R11), CDQ, Division $ Reg R11, Mov (Reg AX, dst)]
  where
   (src, src', dst) = map3 assembleValue rs
 assembleInstruction (IR.Modulo rs) =
-  [Mov (src, Reg AX), Mov (src', Reg R10), CDQ, Division $ Reg R10, Mov (Reg DX, dst)]
+  [Mov (src, Reg AX), Mov (src', Reg R11), CDQ, Division $ Reg R11, Mov (Reg DX, dst)]
  where
   (src, src', dst) = map3 assembleValue rs
 
@@ -167,6 +172,7 @@ emitOperand (Imm n) = "$" ++ (show n)
 emitOperand (Reg AX) = "%eax"
 emitOperand (Reg DX) = "%edx"
 emitOperand (Reg R10) = "%r10d"
+emitOperand (Reg R11) = "%r11d"
 emitOperand (Stack offset) = "-" ++ (show offset) ++ "(%rbp)"
 
 emitInstruction :: Instruction -> String
