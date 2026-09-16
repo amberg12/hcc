@@ -109,7 +109,7 @@ emitIRExpression (AST.Modulo (expr, expr')) = do
 emitFunction :: AST.Function -> Function
 emitFunction (AST.Function name body) = Function (name, instructions s)
  where
-  s = execState (emitIRStatement body) $ GeneratorState {nextTemp = 0, instructions = []}
+  s = execState (mapM_ emitIRStatement body) $ GeneratorState {nextTemp = 0, instructions = []}
 
 emitProgram :: AST.Program -> Program
 emitProgram p = Program $ emitFunction $ AST.function p

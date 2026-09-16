@@ -17,7 +17,7 @@ data Program = Program
 
 data Function = Function
   { functionIdentifier :: String
-  , functionStatement :: Statement
+  , functionStatement :: [Statement]
   }
   deriving (Show)
 
@@ -83,21 +83,21 @@ factorParser =
 
 returnParser :: AstParser Statement
 returnParser =
-  CReturn <$> (tokenParser (Lexer.Keyword Lexer.CReturn) *> expressionParser <* tokenParser Lexer.Semicolon)
+  CReturn <$> (tokenParser (Lexer.Keyword Lexer.CReturn) *> expressionParser)
 
 statementParser :: AstParser Statement
-statementParser = returnParser
+statementParser = returnParser <* tokenParser Lexer.Semicolon
 
 functionParser :: AstParser Function
-functionParser =
-  Function
-    <$> (tokenParser (Lexer.Keyword Lexer.CInt) *> identifierParser)
-    <*> ( tokenParser Lexer.OpenParenthesis
-            *> tokenParser Lexer.CloseParenthesis
-            *> tokenParser Lexer.OpenBrace
-            *> statementParser
-            <* tokenParser Lexer.CloseBrace
-        )
+functionParser = do
+  _ <- tokenParser (Lexer.Keyword Lexer.CInt)
+  functionId <- identifierParser
+  _ <- tokenParser Lexer.OpenParenthesis *> tokenParser Lexer.CloseParenthesis
+
+  _ <- tokenParser Lexer.OpenBrace
+  stmts <- many statementParser
+  _ <- tokenParser Lexer.CloseBrace
+  pure $ Function functionId stmts
 
 programParser :: AstParser Program
 programParser =
